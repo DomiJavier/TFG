@@ -1,0 +1,85 @@
+﻿{% extends "cabecera.html" %}
+{% block content %}
+{% load static %}
+<body>
+    {% if existe %}
+    <script>
+        /*Alerta si recibe un context de invalidez*/
+        Swal.fire({
+            title: 'Imposible',
+            text: 'Existe un usuario con ese nombre',
+            icon: 'warning',
+            timer: 3000,
+            showCancelButton: false,
+            showConfirmButton: false
+        },
+            function () {
+                location.reload(true);
+                tr.hide();
+            }
+        );
+    </script>
+    {% endif %}
+    {% verbatim %}
+    <div ng-app="login">
+        <div class="w3-bar w3-teal">
+            <a onclick="window.history.back();" class="w3-bar-item w3-button w3-right">Acceso</a>
+        </div>
+        <div class="w3-container w3-large w3-center">
+            <h1>PREDICCIÓN METEOROLÓGICA</h1>
+        </div>
+        <div class="content w3-card centrado w3-center">
+            <div class="w3-container w3-teal">
+                <h2>REGISTRO</h2>
+            </div>
+            <form name="registro" action="/registrar/" method="post" class="w3-container w3-light-grey" novalidate>
+                {% endverbatim %}
+                {% csrf_token %}
+                {% verbatim %}
+                <input class="w3-radio" type="radio" name="rg" id="acceso" checked />
+                <input class="w3-radio" type="radio" name="rg" id="registrar" />
+
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-user"></i></div>
+                    <div class="w3-rest">
+                        <input class="w3-input" name="username" ng-model="username" type="text" placeholder="Usuario" pattern="[a-zA-Z0-9]{6,30}" required="" />
+                        <!--Alertas de AngularJS, si username está vacío o no respeta el patrón-->
+                        <span ng-show="registro.$submitted || registro.username.$dirty">
+                            <span class="error" ng-show="registro.username.$error.required"><i class="fa fa-exclamation-circle"></i> Se necesita un nombre de cuenta</span>
+                            <span class="error" ng-show="registro.username.$error.pattern"><i class="fa fa-exclamation-circle"></i> Solo se admiten letras y números, longitud: 3-30</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-key"></i></div>
+                    <div class="w3-rest">
+                        <input class="w3-input" name="password" ng-model="password" type="password" placeholder="Contraseña" pattern="[a-zA-Z0-9]{6,30}" required="" />
+                        <!--Alertas de AngularJS, si password está vacío o no respeta el patrón-->
+                        <span ng-show="registro.$submitted || registro.password.$dirty">
+                            <span class="error" ng-show="registro.password.$error.required"><i class="fa fa-exclamation-circle"></i> Se necesita una contraseña</span>
+                            <span class="error" ng-show="registro.password.$error.pattern"><i class="fa fa-exclamation-circle"></i> Solo se admiten letras y números, longitud: 6-30</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-unlock"></i></div>
+                    <div class="w3-rest">
+                        <input class="w3-input" type="password" ng-model="Rpass" name="Rpass" placeholder="Repetir Contraseña" pattern="{{password}}" required="" />
+                        <!--Alertas de AngularJS, si username está vacío o no respeta el patrón que es justo la variables password anterior-->
+                        <span ng-show="registro.$submitted || registro.Rpass.$dirty">
+                            <span class="error" ng-show="registro.Rpass.$error.required"><i class="fa fa-exclamation-circle"></i> Reintroduzca la contraseña</span>
+                            <span class="error" ng-show="registro.Rpass.$error.pattern"><i class="fa fa-exclamation-circle"></i> La contraseña es diferente</span>
+                        </span>
+                    </div>
+                </div>
+                <!--Validación con AngularJS, si username y Rpass son invalidos se desactivan el submit-->
+                <button class="w3-btn w3-blue-grey" type="submit" ng-disabled="registro.username.$invalid || registro.Rpass.$invalid">Registrar</button>
+            </form>
+
+
+        </div>
+    </div>
+    {% endverbatim %}
+</body>
+</html>
+{% endblock %}

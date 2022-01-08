@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+{% if messages %}
+   {% for message in messages %}
+<script>
+      /*Alerta con mensaje*/
+      Swal.fire({
+          title: '¡Hecho!',
+          text: '{{message}}',
+          icon: 'success',
+          timer: 3000,
+          showCancelButton: false,
+          showConfirmButton: false
+        },
+          function () {
+              location.reload(true);
+              tr.hide();
+            }
+          );
+        </script>
+  {% endfor %}
+{% endif %}
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <!--FAVICON-->
+    <link rel="icon" href="{% static 'favicon.ico' %}">
+    <!---->
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+    {% include 'material/includes/material_css.html' %}
+    <link href="{% static 'fullcalendar/main.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{% static 'login.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% include 'material/includes/material_js.html' %}
+    <script type="text/javascript" src="{% static 'fullcalendar/main.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'fullcalendar/es.js' %}"></script>
+</head>
+
+<body>
+    <div ng-app="login">
+        <div class="w3-bar w3-teal">
+            <a href="{% url 'registro' %}" class="w3-bar-item w3-button w3-right">Registro</a>
+        </div>
+        <div class="w3-container w3-large w3-center">
+            <h1>PREDICCIÓN METEOROLÓGICA</h1>
+        </div>
+        <div class="content w3-card centrado w3-center">
+            <div class="w3-container w3-teal">
+                <h2>ACCESO</h2>
+            </div>
+            <form name="registro" id="registro" method="post" class="w3-container w3-light-grey">
+                {% csrf_token %}
+
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-user"></i></div>
+                    <div class="w3-rest">
+                        <input class="w3-input" name="username" ng-model="nombre" type="text" placeholder="Usuario" />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-key"></i></div>
+                    <div class="w3-rest">
+                        <input class="w3-input" name="password" ng-model="pass" type="password" placeholder="Pass" />
+                    </div>
+                </div>
+
+                <button class="w3-btn w3-blue-grey" type="submit">Enviar</button>
+            </form>
+
+
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,780 @@
+{% extends "cabecera.html" %}
+{% block content %}
+{% load static %}
+<!--Carga de plantillas y archivos estáticos-->
+<body>
+
+    <div>
+        <div class="w3-bar w3-teal">
+            <a href="{% url 'salir' %}" class="w3-bar-item w3-button w3-right">Cerrar sesión</a>
+            <a href="{% url 'perfil' %}" class="w3-bar-item w3-button w3-right">Cambiar Contraseña</a>
+        </div>
+        <div id="miDiv">
+            {% verbatim %}
+        </div>
+        <div class="w3-container w3-large w3-center">
+            <h1>PREDICCIÓN METEOROLÓGICA</h1>
+        </div>
+        <!--Carga de calendario-->
+        <div class="content w3-card centrado w3-center">
+            <div class="w3-container w3-teal">
+                <h2>Calendario</h2>
+            </div>
+            <div class="w3-container w3-light-grey">
+                <div id='calendar'></div>
+            </div>
+
+        </div>
+        <!--Modal para eventos-->
+        <div id="id01" class="w3-modal">
+            <div class="w3-modal-content w3-animate-top w3-card-4 w3-center">
+                <header class="w3-container w3-teal">
+                    <span onclick="document.getElementById('id01').style.display='none'"
+                          class="w3-button w3-display-topright">&times;</span>
+                    <h2 id="evento" value="1">Evento</h2>
+                </header>
+                <form name="eventos" id="eventos" class="w3-container w3-light-grey centrado" method="POST" novalidate>
+                    {% endverbatim %}
+                    {% csrf_token %}
+                    {% verbatim %}
+                    <div class="w3-row w3-section">
+                        <!--Mapa con plugin leaflet-->
+                        <div id="map"></div>
+                        <div class="w3-row w3-section">
+                            <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-calendar"></i></div>
+                            <div class="w3-rest">
+                                <input class="w3-input" name="nombre" ng-model="nombre" type="text" placeholder="Nombre" pattern="[a-zA-Z0-9]{5,30}" id="nombre" required="" />
+                            </div>
+                        </div>
+                        <div class="w3-row w3-section">
+                            <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-map-marker"></i></div>
+                            <div class="w3-rest">
+                                <input class="w3-input" name="lugar" ng-model="lugar" type="text" placeholder="Lugar" id="lugar" disabled />
+                            </div>
+                        </div>
+                        <!--Campo oculto con la fecha en el orden de la base de datos-->
+                        <input type="text" id="fechaO" name="fechaO" value="" hidden></input>
+                        <div class="w3-panel w3-center">
+                            <header class="w3-container w3-teal">
+                                <h2 id="tituloProg">Pronóstico Histórico</h2>
+                            </header>
+                            <div class="" w3-container" id="prog"></div>
+                            <div class="w3-container w3-light-grey">
+                                <canvas id="grafica" width="400" height="400"></canvas>
+                            </div>
+                        </div>
+                        <button type="submit" class="w3-btn w3-blue-grey">Enviar</button>
+</form>
+            </div>
+        </div>
+    </div>
+    {% endverbatim %}
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <script>
+        var ctx = document.getElementById('grafica').getContext('2d');
+        var grafica = new Chart(ctx, {});
+        /*Función para realizar medias*/
+        function media(datos) {
+            if (datos.length > 0) {
+                var dato;
+                var suma = 0;
+                for (let i = 0; i < datos.length; i++) {
+                    if (datos[i] != "Ip" && datos[i] != "Varias") { dato = datos[i].replace(/,/g, '.'); }
+                    else { dato = 0; }
+                    suma += parseFloat(dato);
+                }
+                var med = suma / datos.length;
+                return Math.round(med, 2);
+            }
+            else {
+                return 0;
+            }
+        }
+        /*Función para redondear los valores para incorporarlos a las gráficas como enteros*/
+        function redondearArray(datos) {
+            if (datos.length > 0) {
+                var dato;
+                var nuevos = [];
+                for (let i = 0; i < datos.length; i++) {
+                    if (datos[i] != "Ip" && datos[i] != "Varias") { dato = Math.round(parseFloat(datos[i].replace(/,/g, '.'))); }
+                    else { dato = 0; }
+                    nuevos.push(dato);
+                }
+                return nuevos;
+            }
+            else {
+                return datos;
+            }
+        }
+        /*Función para reformatear y eliminar acentos*/
+        function removerAcentos (String) {
+            return String.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+        /*Función JSON*/
+        function recogerDatos(indicativo) {
+            return 'https://opendata.aemet.es/opendata/api/valores/climatologicos/diarios/datos/fechaini/2018-01-01T00:00:00UTC/fechafin/2021-01-10T00:00:00UTC/estacion/'+indicativo+'/?api_key=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkb21pOTVAaG90bWFpbC5lcyIsImp0aSI6ImJiNzM0Mzg2LWUwYjEtNDZlMy04YTgxLTBkMTFjYWVmMjQwMyIsImlzcyI6IkFFTUVUIiwiaWF0IjoxNjM1NTEyMzk5LCJ1c2VySWQiOiJiYjczNDM4Ni1lMGIxLTQ2ZTMtOGE4MS0wZDExY2FlZjI0MDMiLCJyb2xlIjoiIn0.rjTXU1Jnu52ELvvUGDHF9FXZSewZa5B3P0RQKDDlju8';
+        }
+        /*Función predictiva del tiempo*/
+        function predic(vLugar) {
+            var lugarInput;
+            var xhttp = new XMLHttpRequest();
+            switch (removerAcentos(vLugar)) {
+                case "Madrid":
+                    lugarInput = "Madrid";
+                    xhttp.open("GET", "{% static 'opendata/Madrid.json' %}");
+                    break;
+                case "Malaga":
+                    lugarInput = "Málaga";
+                    xhttp.open("GET", "{% static 'opendata/Malaga.json' %}");
+                    break;
+                case "Sevilla":
+                    lugarInput = "Sevilla";
+                    xhttp.open("GET", "{% static 'opendata/Sevilla.json' %}");
+                    break;
+                case "Huelva":
+                    lugarInput = "Huelva";
+                    xhttp.open("GET", "{% static 'opendata/Huelva.json' %}");
+                    break;
+                case "Cordoba":
+                    lugarInput = "Córdoba";
+                    xhttp.open("GET", "{% static 'opendata/Cordoba.json' %}");
+                    break;
+                case "Granada":
+                    lugarInput = "Granada";
+                    xhttp.open("GET", "{% static 'opendata/Granada.json' %}");
+                    break;
+                case "Jaen":
+                    lugarInput = "Jaén";
+                    xhttp.open("GET", "{% static 'opendata/Jaen.json' %}");
+                    break;
+                case "Almeria":
+                    lugarInput = "Almería";
+                    xhttp.open("GET", "{% static 'opendata/Almeria.json' %}");
+                    break;
+                case "Murcia":
+                    lugarInput = "Murcía";
+                    xhttp.open("GET", "{% static 'opendata/Murcia.json' %}");
+                    break;
+                case "Alicante":
+                    lugarInput = "Alicante";
+                    xhttp.open("GET", "{% static 'opendata/Alicante.json' %}");
+                    break;
+                case "Valencia":
+                    lugarInput = "Valencia";
+                    xhttp.open("GET", "{% static 'opendata/Valencia.json' %}");
+                    break;
+                case "Castellon":
+                    lugarInput = "Castellón";
+                    xhttp.open("GET", "{% static 'opendata/Castellon.json' %}");
+                    break;
+                case "Albacete":
+                    lugarInput = "Albacete";
+                    xhttp.open("GET", "{% static 'opendata/Albacete.json' %}");
+                    break;
+                case "Ciudad Real":
+                    lugarInput = "Ciudad Real";
+                    xhttp.open("GET", "{% static 'opendata/CiudadReal.json' %}");
+                    break;
+                case "Toledo":
+                    lugarInput = "Toledo";
+                    xhttp.open("GET", "{% static 'opendata/Toledo.json' %}");
+                    break;
+                case "Cuenca":
+                    lugarInput = "Cuenca";
+                    xhttp.open("GET", "{% static 'opendata/Cuenca.json' %}");
+                    break;
+                case "Guadalajara":
+                    lugarInput = "Guadalajara";
+                    xhttp.open("GET", "{% static 'opendata/Guadalajara.json' %}");
+                    break;
+                case "Caceres":
+                    lugarInput = "Cáceres";
+                    xhttp.open("GET", "{% static 'opendata/Caceres.json' %}");
+                    break;
+                case "Salamanca":
+                    lugarInput = "Salamanca";
+                    xhttp.open("GET", "{% static 'opendata/Salamanca.json' %}");
+                    break;
+                case "Avila":
+                    lugarInput = "Ávila";
+                    xhttp.open("GET", "{% static 'opendata/Avila.json' %}");
+                    break;
+                case "Segovia":
+                    lugarInput = "Segovia";
+                    xhttp.open("GET", "{% static 'opendata/Segovia.json' %}");
+                    break;
+                case "Zamora":
+                    lugarInput = "Zamora";
+                    xhttp.open("GET", "{% static 'opendata/Zamora.json' %}");
+                    break;
+                case "Valladolid":
+                    lugarInput = "Valladolid";
+                    xhttp.open("GET", "{% static 'opendata/Valladolid.json' %}");
+                    break;
+                case "Burgos":
+                    lugarInput = "Burgos";
+                    xhttp.open("GET", "{% static 'opendata/Burgos.json' %}");
+                    break;
+                case "Palencia":
+                    lugarInput = "Palencia";
+                    xhttp.open("GET", "{% static 'opendata/Palencia.json' %}");
+                    break;
+                case "Soria":
+                    lugarInput = "Soria";
+                    xhttp.open("GET", "{% static 'opendata/Soria.json' %}");
+                    break;
+                case "Leon":
+                    lugarInput = "León";
+                    xhttp.open("GET", "{% static 'opendata/Leon.json' %}");
+                    break;
+                case "Orense":
+                    lugarInput = "Orense";
+                    xhttp.open("GET", "{% static 'opendata/Orense.json' %}");
+                    break;
+                case "Lugo":
+                    lugarInput = "Lugo";
+                    xhttp.open("GET", "{% static 'opendata/Lugo.json' %}");
+                    break;
+                case "A coruna":
+                    lugarInput = "A coruña";
+                    xhttp.open("GET", "{% static 'opendata/ACoruna.json' %}");
+                    break;
+                case "Asturias":
+                    lugarInput = "Asturias";
+                    xhttp.open("GET", "{% static 'opendata/Asturias.json' %}");
+                    break;
+                case "Cantabria":
+                    lugarInput = "Cantabria";
+                    xhttp.open("GET", "{% static 'opendata/Cantabria.json' %}");
+                    break;
+                case "Teruel":
+                    lugarInput = "Teruel";
+                    xhttp.open("GET", "{% static 'opendata/Teruel.json' %}");
+                    break;
+                case "Zaragoza":
+                    lugarInput = "Zaragoza";
+                    xhttp.open("GET", "{% static 'opendata/Zaragoza.json' %}");
+                    break;
+                case "Huesca":
+                    lugarInput = "Huesca";
+                    xhttp.open("GET", "{% static 'opendata/Huesca.json' %}");
+                    break;
+                case "Tarragona":
+                    lugarInput = "Tarragona";
+                    xhttp.open("GET", "{% static 'opendata/Tarragona.json' %}");
+                    break;
+                case "Lleida":
+                    lugarInput = "Lleída";
+                    xhttp.open("GET", "{% static 'opendata/Lleida.json' %}");
+                    break;
+                case "Barcelona":
+                    lugarInput = "Barcelona";
+                    xhttp.open("GET", "{% static 'opendata/Barcelona.json' %}");
+                    break;
+                case "Girona":
+                    lugarInput = "Girona";
+                    xhttp.open("GET", "{% static 'opendata/Girona.json' %}");
+                    break;
+                case "La Rioja":
+                    lugarInput = "La Rioja";
+                    xhttp.open("GET", "{% static 'opendata/LaRioja.json' %}");
+                    break;
+                case "Navarra":
+                    lugarInput = "Navarra";
+                    xhttp.open("GET", "{% static 'opendata/Navarra.json' %}");
+                    break;
+                case "Bilbao":
+                    lugarInput = "Bilbao";
+                    xhttp.open("GET", "{% static 'opendata/Bilbao.json' %}");
+                    break;
+                case "Guipuzcua":
+                    lugarInput = "Guipuzcua";
+                    xhttp.open("GET", "{% static 'opendata/Guipuzcua.json' %}");
+                    break;
+                case "Alava":
+                    lugarInput = "Álava";
+                    xhttp.open("GET", "{% static 'opendata/Alava.json' %}");
+                    break;
+                case "Tenerife":
+                    lugarInput = "Tenerife";
+                    xhttp.open("GET", "{% static 'opendata/Tenerife.json' %}");
+                    break;
+                case "La Gomera":
+                    lugarInput = "La Gomera";
+                    xhttp.open("GET", "{% static 'opendata/LaGomera.json' %}");
+                    break;
+                case "Gran Canaria":
+                    lugarInput = "Gran Canaria";
+                    xhttp.open("GET", "{% static 'opendata/GranCanaria.json' %}");
+                    break;
+                case "Fuerteaventura":
+                    lugarInput = "Fuerteaventura";
+                    xhttp.open("GET", "{% static 'opendata/Fuerteaventura.json' %}");
+                    break;
+                case "Lanzarote":
+                    lugarInput = "Lanzarote";
+                    xhttp.open("GET", "{% static 'opendata/Lanzarote.json' %}");
+                    break;
+                case "Las Palmas":
+                    lugarInput = "Las Palmas";
+                    xhttp.open("GET", "{% static 'opendata/LasPalmas.json' %}");
+                    break;
+                case "El Hierro":
+                    lugarInput = "El Hierro";
+                    xhttp.open("GET", "{% static 'opendata/ElHierro.json' %}");
+                    break;
+                case "Mallorca":
+                    lugarInput = "Mallorca";
+                    xhttp.open("GET", "{% static 'opendata/Mallorca.json' %}");
+                case "Menorca":
+                    lugarInput = "Menorca";
+                    xhttp.open("GET", "{% static 'opendata/Menorca.json' %}");
+                    break;
+                case "Ibiza":
+                    lugarInput = "Ibiza";
+                    xhttp.open("GET", "{% static 'opendata/Ibiza.json' %}");
+                    break;
+                case "Formentera":
+                    lugarInput = "Formentera";
+                    xhttp.open("GET", "{% static 'opendata/Formentera.json' %}");
+                    break;
+                case "Melilla":
+                    lugarInput = "Melilla";
+                    xhttp.open("GET", "{% static 'opendata/Melilla.json' %}");
+                    break;
+                case "Ceuta":
+                    lugarInput = "Ceuta";
+                    xhttp.open("GET", "{% static 'opendata/Ceuta.json' %}");
+                    break;
+                default:
+                    lugarInput = "Madrid";
+                    xhttp.open("GET", "{% static 'opendata/Madrid.json' %}");
+                    break;
+            }
+            document.getElementById('lugar').value = lugarInput;
+            xhttp.send();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    /*Crear variables*/
+                    /*Datos = JSON context del view*/
+                    let datos = JSON.parse(this.responseText);
+
+                    let res = document.getElementById('prog');
+                    var aMax = [];
+                    var aMin = [];
+                    var aMed = [];
+                    var velMed = [];
+                    var preMed = [];
+                    var racha = [];
+                    var sol = [];
+                    var ultimoAnno;
+                    res.innerHTML = '';
+                    for (let item of datos) {
+                        /*Formatear fecha*/
+                        var parte = item.fecha.split("-");
+                        var fechaInv = (parte[2] + "/" + parte[1]);
+                        Anno = parte[0];
+                        /*Comparar fechas sin años para recolectar el día de ese mes de diferentes años*/
+                        if (fechaInv == document.getElementById('evento').value.slice(0, 5) && document.getElementById('evento').value.slice(6) >= Anno) {
+                            /*Guardar en cada array todos los datos para recibir los datos en los que se basan las medias*/
+                            ultimoAnno = parte[0];
+                            aMax.push(item.tmax);
+                            aMin.push(item.tmin);
+                            aMed.push(item.tmed);
+                            velMed.push(item.velmedia);
+                            preMed.push(item.prec);
+                            racha.push(item.racha);
+                            sol.push(item.sol);
+                        }
+                    }
+                    document.getElementById('tituloProg').innerHTML = "Pronóstico Histórico (Última fecha recogida " + ultimoAnno + ")";
+                    res.innerHTML += '<div class="w3-card-4"><div class="tooltip w3-row"><p> Temperatura Máxima: ' + media(aMax) + ' Cº </p><span class="tooltiptext">(Valores extraídos:' + JSON.stringify(aMax, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Temperatura Mínima:' + media(aMin) + ' Cº</p><span class="tooltiptext">(Valores extraídos: ' + JSON.stringify(aMin, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Temperatura Media:' + media(aMed) + ' Cº</p><span class="tooltiptext">(Valores extraídos:' + JSON.stringify(aMed, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Viento:' + media(velMed) + ' km/h</p><span class="tooltiptext">(Valores extraídos: ' + JSON.stringify(velMed, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Racha:' + media(racha) + ' km/h</p><span class="tooltiptext">(Valores extraídos: ' + JSON.stringify(racha, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Precipitaciones:' + media(preMed) + ' %</p><span class="tooltiptext">(Valores extraídos: ' + JSON.stringify(preMed, null, 2) + ')</span></div><br><div class="tooltip w3-row"><p> Sol:' + media(sol) + '</p><span class="tooltiptext">(Valores extraídos: ' + JSON.stringify(sol, null, 2) + ')</span></div></div>';
+                    /*Gráfica*/
+                    var aMax = redondearArray(aMax);
+                    var aMed = redondearArray(aMed);
+                    var aMin = redondearArray(aMin);
+                    var velMed = redondearArray(velMed);
+                    var preMed = redondearArray(preMed);
+                    var racha = redondearArray(racha);
+                    var sol = redondearArray(sol);
+
+                    grafica.destroy();
+
+                    grafica = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021],
+                            datasets: [{
+                                label: 'Temperatura mínima',
+                                data: aMin,
+                                backgroundColor: 'purple',
+                                borderColor: 'purple',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Temperatura media',
+                                data: aMed,
+                                backgroundColor: 'green',
+                                borderColor: 'green',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Temperatura máxima',
+                                data: aMax,
+                                backgroundColor: 'red',
+                                borderColor: 'red',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Viento',
+                                data: velMed,
+                                backgroundColor: 'olive',
+                                borderColor: 'olive',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Racha',
+                                data: racha,
+                                backgroundColor: 'darkcyan',
+                                borderColor: 'darkcyan',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Precipitaciones',
+                                data: preMed,
+                                backgroundColor: 'blue',
+                                borderColor: 'blue',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Sol',
+                                data: sol,
+                                backgroundColor: 'darkorange',
+                                borderColor: 'darkorange',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            elements: {
+                                line: {
+                                    tension: 0
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        /*Creacuón del calendario dinámico con el plugin FULLCALENDAR*/
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                locale: 'es',
+                initialView: 'dayGridMonth',
+                selectable: true,
+                editable: true,
+                dateClick: function (info) {
+                    var evento = calendar.getEvents();
+                    document.getElementById('nombre').value = "";
+                    for (let i = 0; i < evento.length; i++) {
+                        if (FullCalendar.formatDate(info.date, { month: '2-digit', year: 'numeric', day: '2-digit', locale: 'es' }) == FullCalendar.formatDate(evento[i].start, { month: '2-digit', year: 'numeric', day: '2-digit', locale: 'es' })) {
+                            document.getElementById('nombre').value = evento[i].title;
+                        }
+                    }
+                    var fechaE = FullCalendar.formatDate(info.date, { day: '2-digit', month: '2-digit', year: 'numeric', locale: 'es' });
+                    var parte = fechaE.split("/");
+                    var fechaInv = (parte[2] + "-" + parte[1] + "-" + parte[0]);
+                    document.getElementById('evento').innerHTML = fechaE;
+                    document.getElementById('evento').value = fechaE;
+                    document.getElementById('fechaO').value = fechaInv;
+                    document.getElementById('id01').style.display = 'block';
+                    document.getElementById('lugar').value = "";
+                    document.getElementById('tituloProg').innerHTML = "";
+                    document.getElementById('prog').innerHTML = "";
+                    /*Obtener lugar para realizar predicción*/
+                    {% for i in eventos %}
+                    var partesF = "{{i.start}}".split("-");
+                    if (fechaE == partesF[2]+"/"+partesF[1]+"/"+partesF[0]) {
+                        document.getElementById('lugar').value = "{{i.lugar}}";
+                        predic(document.getElementById('lugar').value);
+                    }
+                    {% endfor %}
+                    map.invalidateSize();
+                },
+                events: [
+                    {% for i in eventos %}
+                        {
+                            id: "{{ i.start }}",
+                            title: "{{ i.title }}",
+                            start: "{{ i.start }}",
+                        },
+                    {% endfor %}
+                ],
+            });
+            calendar.render();
+            /*Formulario AJAX para crear eventos sin recargar*/
+            $(document).on('submit', '#eventos', function (e) {
+                e.preventDefault();
+                if ($('#lugar').val() != '') {
+                    $.ajax({
+                        type: 'POST',
+                        url: '/evento',
+                        data: {
+                            title: $('#nombre').val(),
+                            start: $('#fechaO').val(),
+                            lugar: $('#lugar').val(),
+                            csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+                        },
+                        success: function (data) {
+                            Swal.fire({
+                                title: 'Evento ' + data.title,
+                                icon: 'success',
+                                timer: 3000,
+                                showCancelButton: false,
+                                showConfirmButton: false
+                            },
+                                function () {
+                                    location.reload(true);
+                                    tr.hide();
+                                }
+                            );
+                            eventoE = {
+                                id: data.start,
+                                title: data.title,
+                                start: data.start,
+                            }
+                            /*Remover el anterior evento si es necesario*/
+                            var eventoAnt = calendar.getEventById(data.start);
+                            if (eventoAnt) {
+                                eventoAnt.remove();
+                            }
+                            calendar.addEvent(eventoE);
+                        }
+                    });
+                }
+                else {
+                    Swal.fire({
+                        title: 'Se necesita una localización',
+                        icon: 'error',
+                        timer: 3000,
+                        showCancelButton: false,
+                        showConfirmButton: false
+                    },
+                        function () {
+                            location.reload(true);
+                            tr.hide();
+                        }
+                    );
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript">
+
+        var map = L.map('map').setView([40.420553506787094, -3.7133789062500004], 6);
+        var marker, lugar;
+        var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        var myFeatureGroup = L.featureGroup().addTo(map).on("click", groupClick);
+        function groupClick(event) {
+            predic(event.layer.lugar);
+        }
+        /* Esta función muestra cada coordenada por si se necesitan asignar más
+            map.on('click', function (e) {
+            var coord = e.latlng;
+            var lat = coord.lat;
+            var lng = coord.lng;
+
+            ("Latitud: " + lat + " Longitud: " + lng);
+        });*/
+        //Posiciones Seleccionables
+        marker = L.marker([40.39016196553099, -3.6968994140625004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Madrid</b>.");
+        marker.lugar = "Madrid";
+        marker = L.marker([36.724988877077095, -4.405517578125001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Málaga</b>.");
+        marker.lugar = "Malaga";
+        marker = L.marker([35.24940422734931, -2.9333496093750004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Melilla</b>.");
+        marker.lugar = "Melilla";
+        marker = L.marker([35.88331314752446, -5.344848632812501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Ceuta</b>.");
+        marker.lugar = "Ceuta";
+        marker = L.marker([37.37636424632677, -5.993041992187501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Sevilla</b>.");
+        marker.lugar = "Sevilla";
+        marker = L.marker([37.24529319425794, -6.948852539062501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Huelva</b>.");
+        marker.lugar = "Huelva";
+        marker = L.marker([37.868010248551826, -4.768066406250001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Códoba</b>.");
+        marker.lugar = "Cordoba";
+        marker = L.marker([37.16123997668808, -3.6062622070312504]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Granada</b>.");
+        marker.lugar = "Granada";
+        marker = L.marker([37.77254656936578, -3.7957763671875004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Jaén</b>.");
+        marker.lugar = "Jaen";
+        marker = L.marker([36.86389680607121, -2.4609375000000004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Almería</b>.");
+        marker.lugar = "Almería";
+        marker = L.marker([37.97634176237577, -1.1508178710937502]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Murcía</b>.");
+        marker.lugar = "Murcia";
+        marker = L.marker([38.35208991771526, -0.5465698242187501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Alicante</b>.");
+        marker.lugar = "Alicante";
+        marker = L.marker([39.46253822194348, -0.38314819335937506]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Valencia</b>.");
+        marker.lugar = "Valencia";
+        marker = L.marker([39.93014265052016, -0.09338378906250001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Castellón</b>.");
+        marker.lugar = "Castellon";
+        marker = L.marker([38.96301272684521, -1.8511962890625002]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Albacete</b>.");
+        marker.lugar = "Albacete";
+        marker = L.marker([38.95446976982263, -3.9385986328125004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Ciudad Real</b>.");
+        marker.lugar = "Ciudad Real";
+        marker = L.marker([39.79521605954984, -4.015502929687501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Toledo</b>.");
+        marker.lugar = "Toledo";
+        marker = L.marker([40.058825967367525, -2.1670532226562504]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Cuenca</b>.");
+        marker.lugar = "Cuenca";
+        marker = L.marker([40.628219900859214, -3.1640625000000004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Guadalajara</b>.");
+        marker.lugar = "Guadalajara";
+        marker = L.marker([38.84579105162198, -7.0037841796875]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Badajoz</b>.");
+        marker.lugar = "Badajoz";
+        marker = L.marker([39.4464671648117, -6.366577148437501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Cáceres</b>.");
+        marker.lugar = "Caceres";
+        marker = L.marker([40.9484640406594, -5.679931640625001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Salamanca</b>.");
+        marker.lugar = "Salamanca";
+        marker = L.marker([40.649061850683516, -4.702148437500001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Ávila</b>.");
+        marker.lugar = "Avila";
+        marker = L.marker([40.9484640406594, -4.114379882812501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Segovia</b>.");
+        marker.lugar = "Segovia";
+        marker = L.marker([41.50619908355546, -5.718383789062501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Zamora</b>.");
+        marker.lugar = "Zamora";
+        marker = L.marker([41.633599500074986, -4.718627929687501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Valladolid</b>.");
+        marker.lugar = "Valladolid";
+        marker = L.marker([42.321366468801514, -3.6749267578125004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Burgos</b>.");
+        marker.lugar = "Burgos";
+        marker = L.marker([42.00204730127574, -4.531860351562501]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Palencia</b>.");
+        marker.lugar = "Palencia";
+        marker = L.marker([41.7091886751771, -2.4444580078125004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Soria</b>.");
+        marker.lugar = "Soria";
+        marker = L.marker([42.52411547945395, -5.537109375000001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>León</b>.");
+        marker.lugar = "Leon";
+        marker = L.marker([42.28073800051147, -7.877197265625001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Orense</b>.");
+        marker.lugar = "Orense";
+        marker = L.marker([43.016069813188494, -7.536621093750001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Lugo</b>.");
+        marker.lugar = "Lugo";
+        marker = L.marker([43.29657372028703, -8.382568359375002]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>A Coruña</b>.");
+        marker.lugar = "A coruna";
+        marker = L.marker([43.262893738526245, -5.844726562500001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Asturias</b>.");
+        marker.lugar = "Asturias";
+        marker = L.marker([43.12673455069282, -4.273681640625001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Cantabría</b>.");
+        marker.lugar = "Cantabria";
+        marker = L.marker([40.34170322051694, -1.1096191406250002]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Teruel</b>.");
+        marker.lugar = "Teruel";
+        marker = L.marker([41.659960002665635, -0.8679199218750001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Zaragoza</b>.");
+        marker.lugar = "Zaragoza";
+        marker = L.marker([42.13425848864291, -0.39550781250000006]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Huesca</b>.");
+        marker.lugar = "Huesca";
+        marker = L.marker([41.06977497113592, 0.9448242187500001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Tarragona</b>.");
+        marker.lugar = "Tarragona";
+        marker = L.marker([41.58604638115362, 0.6481933593750001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Lleída</b>.");
+        marker.lugar = "Lleida";
+        marker = L.marker([41.4132518736699, 2.1533203125000004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Barcelona</b>.");
+        marker.lugar = "Barcelona";
+        marker = L.marker([41.91390259639942, 2.8234863281250004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Girona</b>.");
+        marker.lugar = "Girona";
+        marker = L.marker([42.2668294265635, -2.4444580078125004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>La Rioja</b>.");
+        marker.lugar = "La Rioja";
+        marker = L.marker([42.61949677473904, -1.8347167968750002]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Navarra</b>.");
+        marker.lugar = "Navarra";
+        marker = L.marker([43.25404887268414, -2.9278564453125]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Bilbao</b>.");
+        marker.lugar = "Bilbao";
+        marker = L.marker([43.30240646068635, -2.0008850097656254]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Guipúzcua</b>.");
+        marker.lugar = "Guipuzcua";
+        marker = L.marker([42.842587073505015, -2.6834106445312504]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Álava</b>.");
+        marker.lugar = "Alava";
+        marker = L.marker([28.32474454279743, -16.517944335937504]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Tenerife</b>.");
+        marker.lugar = "Tenerife";
+        marker = L.marker([28.104502836210518, -17.226562500000004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>San Sebastián de la Gomera</b>.");
+        marker.lugar = "La Gomera";
+        marker = L.marker([27.949336068716992, -15.595092773437502]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Gran Canaria</b>.");
+        marker.lugar = "Gran Canaria";
+        marker = L.marker([28.378940993873005, -14.018554687500002]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Fuerteaventura</b>.");
+        marker.lugar = "Fuerteaventura";
+        marker = L.marker([29.033865105075645, -13.62579345703125]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Lanzarote</b>.");
+        marker.lugar = "Lanzarote";
+        marker = L.marker([28.677843567417792, -17.836303710937504]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Las Palmas</b>.");
+        marker.lugar = "Las Palmas";
+        marker = L.marker([27.730755227074546, -18.017578125000004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>El Hierro</b>.");
+        marker.lugar = "El Hierro";
+        marker = L.marker([39.60234862115653, 2.9113769531250004]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Mallorca</b>.");
+        marker.lugar = "Mallorca";
+        marker = L.marker([39.9410016500909, 4.075927734375001]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Menorca</b>.");
+        marker.lugar = "Menorca";
+        marker = L.marker([38.97480765599548, 1.4186096191406252]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Ibiza</b>.");
+        marker.lugar = "Ibiza";
+        marker = L.marker([38.69989623034147, 1.4419555664062502]).addTo(myFeatureGroup).addTo(map)
+            .bindPopup("<b>Formentera</b>.");
+        marker.lugar = "Formentera";
+        //FIN Posiciones Seleccionables
+    </script>
+    <script>
+
+    </script>
+</body>
+</html>
+{% endblock %}
