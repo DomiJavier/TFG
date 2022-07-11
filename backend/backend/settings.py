@@ -61,7 +61,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # HOST
 
-ALLOWED_HOSTS = ['192.168.3.100', 'localhost', '127.0.0.1', 'www.app-tfg.local']
+ALLOWED_HOSTS = ['192.168.1.138', 'localhost', '127.0.0.1', 'www.app-tfg.local']
 
 # BASE DE DATOS
 

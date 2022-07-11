@@ -12,6 +12,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.messages import get_messages
+from urllib import request
 # Create your views here.
 
 def funciona(request): #primera vista
@@ -46,8 +47,11 @@ def salir(request):
     logout(request)
     return redirect('/')
 def crearDatos(request):
-    context = {}
-    return render(request, 'crearDatos.html', context)
+    url = "https://opendata.aemet.es/opendata/api/valores/climatologicos/diarios/datos/fechaini/2018-01-01T00:00:00UTC/fechafin/2021-01-10T00:00:00UTC/estacion/3129/?api_key=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkb21pOTVAaG90bWFpbC5lcyIsImp0aSI6ImJiNzM0Mzg2LWUwYjEtNDZlMy04YTgxLTBkMTFjYWVmMjQwMyIsImlzcyI6IkFFTUVUIiwiaWF0IjoxNjM1NTEyMzk5LCJ1c2VySWQiOiJiYjczNDM4Ni1lMGIxLTQ2ZTMtOGE4MS0wZDExY2FlZjI0MDMiLCJyb2xlIjoiIn0.rjTXU1Jnu52ELvvUGDHF9FXZSewZa5B3P0RQKDDlju8"
+    result = request.post(url)
+    print(result.url)
+    print(result)
+
 def registro(request):
     context = {}
     return render(request, 'registro.html', context)

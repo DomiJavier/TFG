@@ -2,39 +2,5 @@
 {% load static %}
 {% block content %}
 <div id="datos"></div>
-<script>
-    var settings = {
-        "async": true,
-        "crossDomain": true,
-        "url": "https://opendata.aemet.es/opendata/api/valores/climatologicos/diarios/datos/fechaini/2018-01-01T00:00:00UTC/fechafin/2021-01-10T00:00:00UTC/estacion/3129/?api_key=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkb21pOTVAaG90bWFpbC5lcyIsImp0aSI6ImJiNzM0Mzg2LWUwYjEtNDZlMy04YTgxLTBkMTFjYWVmMjQwMyIsImlzcyI6IkFFTUVUIiwiaWF0IjoxNjM1NTEyMzk5LCJ1c2VySWQiOiJiYjczNDM4Ni1lMGIxLTQ2ZTMtOGE4MS0wZDExY2FlZjI0MDMiLCJyb2xlIjoiIn0.rjTXU1Jnu52ELvvUGDHF9FXZSewZa5B3P0RQKDDlju8",
-        "method": "GET",
-        "headers": {
-            "cache-control": "no-cache"
-        }
-    }
 
-    $.ajax(settings).done(function (response) {
-        var conf = {
-            "async": true,
-            "crossDomain": true,
-            "url": response.datos,
-            "method": "GET",
-            "headers": {
-                "cache-control": "no-cache"
-            }
-        }
-        $.ajax(conf).done(function (response) {
-            jsonData = JSON.parse(response);
-
-            set fso = new ActiveXObject("Scripting.FileSystemObject");
-            set filename = "{% static 'opendata/Nombre.json' %}";
-            fso.CreateTextFile(filename);
-            var file = fso.GetFile(filename);
-            var streamWrite = file.OpenAsTextStream(2);
-
-            streamWrite.WriteLine(jsonData);
-            streamWrite.close();
-        });
-    });
-</script>
 {% endblock %}
